@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Amazon Price Monitor{% endblock %}
+
+{% block content %}
+
+<!-- 统计卡片 -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">商品总数</div>
+                    <div class="stat-value">{{ stats.total_products }}</div>
+                </div>
+                <div class="stat-icon text-primary"><i class="bi bi-box-seam"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">均价</div>
+                    <div class="stat-value">{% if stats.avg_price %}${{ stats.avg_price }}{% else %}-{% endif %}</div>
+                </div>
+                <div class="stat-icon text-success"><i class="bi bi-currency-dollar"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">总评论数</div>
+                    <div class="stat-value">{{ "{:,}".format(stats.total_reviews) }}</div>
+                </div>
+                <div class="stat-icon text-warning"><i class="bi bi-star-fill"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stat-label">降价商品</div>
+                    <div class="stat-value {% if stats.price_drops > 0 %}text-danger{% endif %}">{{ stats.price_drops }}</div>
+                </div>
+                <div class="stat-icon text-danger"><i class="bi bi-graph-down-arrow"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 降价提醒 -->
+{% if drops %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <i class="bi bi-exclamation-triangle-fill"></i>
+    <strong>发现 {{ drops|length }} 个商品降价!</strong>
+    {% for d in drops[:3] %}
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        {{ d.title[:30] }}...
+        <span class="fw-bold">${{ "%.2f"|format(d.old_price) }} → ${{ "%.2f"|format(d.new_price) }}</span>
+        <span class="badge bg-danger">-{{ d.drop_pct }}%</span>
+    {% endfor %}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+{% endif %}
+
+<!-- 品类过滤 -->
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+    <span class="text-muted small fw-semibold me-1"><i class="bi bi-tags"></i> Category:</span>
+
+    <a href="?sort_by={{ sort_by }}&order={{ order }}"
+       class="btn btn-sm {% if not category and not card_type and not price_status %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+        All <span class="badge bg-light text-dark ms-1">{{ filter_opts.total }}</span>
+    </a>
+
+    {% for cat, cnt in filter_opts.categories.items() %}
+    <a href="?category={{ cat }}&sort_by={{ sort_by }}&order={{ order }}"
+       class="btn btn-sm {% if category == cat %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+        {{ cat }} <span class="badge bg-light text-dark ms-1">{{ cnt }}</span>
+    </a>
+    {% endfor %}
+
+    <span class="text-muted mx-1">|</span>
+
+    {% for t, c in filter_opts.card_types.items() %}
+    <a href="?card_type={{ t }}&category={{ category }}&sort_by={{ sort_by }}&order={{ order }}"
+       class="btn btn-sm {% if card_type == t %}btn-info{% else %}btn-outline-info{% endif %}">
+        {{ t }} <span class="badge bg-light text-dark ms-1">{{ c }}</span>
+    </a>
+    {% endfor %}
+
+    <span class="text-muted mx-1">|</span>
+
+    <a href="?price_status=has&category={{ category }}&sort_by={{ sort_by }}&order={{ order }}"
+       class="btn btn-sm {% if price_status == 'has' %}btn-success{% else %}btn-outline-success{% endif %}">
+        With Price <span class="badge bg-light text-dark ms-1">{{ filter_opts.has_price }}</span>
+    </a>
+    <a href="?price_status=none&category={{ category }}&sort_by={{ sort_by }}&order={{ order }}"
+       class="btn btn-sm {% if price_status == 'none' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+        No Price <span class="badge bg-light text-dark ms-1">{{ filter_opts.no_price }}</span>
+    </a>
+
+    {% if category or card_type or price_status %}
+    <a href="/" class="btn btn-sm btn-outline-danger ms-2"><i class="bi bi-x-lg"></i> Clear all</a>
+    {% endif %}
+</div>
+
+<!-- 搜索 & 排序 -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <form class="d-flex gap-2" method="get">
+        {% if category %}<input type="hidden" name="category" value="{{ category }}">{% endif %}
+        {% if card_type %}<input type="hidden" name="card_type" value="{{ card_type }}">{% endif %}
+        {% if price_status %}<input type="hidden" name="price_status" value="{{ price_status }}">{% endif %}
+        <input type="text" name="keyword" class="form-control" placeholder="Search products..." value="{{ keyword }}">
+        <button class="btn btn-outline-primary" type="submit"><i class="bi bi-search"></i></button>
+        {% if keyword %}
+        <a href="?{% if category %}category={{ category }}&{% endif %}{% if card_type %}card_type={{ card_type }}&{% endif %}{% if price_status %}price_status={{ price_status }}&{% endif %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i></a>
+        {% endif %}
+    </form>
+    <div>
+        <a href="?sort_by=current_price&order=asc&keyword={{ keyword }}&category={{ category }}&card_type={{ card_type }}&price_status={{ price_status }}" class="btn btn-sm btn-outline-secondary">Price ↑</a>
+        <a href="?sort_by=current_price&order=desc&keyword={{ keyword }}&category={{ category }}&card_type={{ card_type }}&price_status={{ price_status }}" class="btn btn-sm btn-outline-secondary">Price ↓</a>
+        <a href="?sort_by=rating&order=desc&keyword={{ keyword }}&category={{ category }}&card_type={{ card_type }}&price_status={{ price_status }}" class="btn btn-sm btn-outline-secondary">Rating ↓</a>
+        <a href="?sort_by=review_count&order=desc&keyword={{ keyword }}&category={{ category }}&card_type={{ card_type }}&price_status={{ price_status }}" class="btn btn-sm btn-outline-secondary">Reviews ↓</a>
+        <a href="?sort_by=created_at&order=desc&keyword={{ keyword }}&category={{ category }}&card_type={{ card_type }}&price_status={{ price_status }}" class="btn btn-sm btn-outline-secondary">Newest</a>
+    </div>
+</div>
+
+<!-- 商品表格 -->
+<div class="product-table">
+    <table class="table table-hover mb-0">
+        <thead>
+            <tr>
+                <th style="width:60px"></th>
+                <th>商品信息</th>
+                <th>价格</th>
+                <th>评分</th>
+                <th>评论</th>
+                <th>类型</th>
+                <th>更新时间</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in products %}
+            <tr>
+                <td>
+                    {% if p.image_url %}
+                    <img src="{{ p.image_url }}" alt="" style="width:50px;height:50px;object-fit:contain;">
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="/product/{{ p.asin }}" class="text-decoration-none fw-medium" title="{{ p.title or '无标题' }}">{{ (p.title[:80] + '...') if p.title and p.title|length > 80 else (p.title or '无标题') }}</a>
+                    <br><span class="asin-badge">{{ p.asin }}</span>
+                    {% if p.brand %}<small class="text-muted ms-1">{{ p.brand }}</small>{% endif %}
+                </td>
+                <td>
+                    {% if p.current_price %}
+                    <span class="fw-bold">${{ "%.2f"|format(p.current_price) }}</span>
+                    {% if p.list_price_raw %}<br><small class="text-muted text-decoration-line-through">{{ p.list_price_raw }}</small>{% endif %}
+                    {% else %}<span class="text-muted">-</span>{% endif %}
+                </td>
+                <td>
+                    {% if p.rating %}
+                    <span class="rating-stars">★</span> {{ "%.1f"|format(p.rating) }}
+                    {% else %}<span class="text-muted">-</span>{% endif %}
+                </td>
+                <td>
+                    {% if p.review_count %}{{ "{:,}".format(p.review_count) }}{% else %}-{% endif %}
+                </td>
+                <td><span class="badge bg-secondary">{{ p.card_type or '-' }}</span></td>
+                <td><small class="text-muted">{{ p.updated_at.strftime('%m-%d %H:%M') if p.updated_at else '-' }}</small></td>
+            </tr>
+            {% endfor %}
+            {% if not products %}
+            <tr><td colspan="7" class="text-center text-muted py-4">暂无数据，请先执行 <code>python main.py crawl</code> 采集数据</td></tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 分页 -->
+{% set filter_q = '&category=' + category if category else '' %}
+{% set filter_q = filter_q + ('&card_type=' + card_type) if card_type else filter_q %}
+{% set filter_q = filter_q + ('&price_status=' + price_status) if price_status else filter_q %}
+{% set filter_q = filter_q + ('&keyword=' + keyword) if keyword else filter_q %}
+
+{% if total_pages > 1 %}
+<nav class="mt-3">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ page - 1 }}&sort_by={{ sort_by }}&order={{ order }}{{ filter_q }}">上一页</a>
+        </li>
+        {% for i in range(1, total_pages + 1) %}
+            {% if i <= 3 or i > total_pages - 3 or (i >= page - 1 and i <= page + 1) %}
+            <li class="page-item {% if i == page %}active{% endif %}">
+                <a class="page-link" href="?page={{ i }}&sort_by={{ sort_by }}&order={{ order }}{{ filter_q }}">{{ i }}</a>
+            </li>
+            {% elif i == 4 or i == total_pages - 3 %}
+            <li class="page-item disabled"><span class="page-link">...</span></li>
+            {% endif %}
+        {% endfor %}
+        <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ page + 1 }}&sort_by={{ sort_by }}&order={{ order }}{{ filter_q }}">下一页</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+
+{% endblock %}

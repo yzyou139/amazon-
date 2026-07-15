@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}{{ product.title[:40] if product.title else '商品详情' }} — Amazon Price Monitor{% endblock %}
+
+{% block content %}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">Dashboard</a></li>
+        <li class="breadcrumb-item active">{{ product.asin }}</li>
+    </ol>
+</nav>
+
+<div class="row g-4">
+    <!-- 左侧: 商品信息 -->
+    <div class="col-md-4">
+        <!-- 商品图片 -->
+        {% if images %}
+        <div class="card mb-3" style="border:none; border-radius:12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);">
+            <div class="card-body text-center">
+                <img src="{{ images[0] }}" alt="{{ product.title }}" class="img-fluid" style="max-height:300px;object-fit:contain;">
+            </div>
+        </div>
+        {% if images|length > 1 %}
+        <div class="d-flex gap-2 flex-wrap mb-3">
+            {% for img in images[:6] %}
+            <img src="{{ img }}" alt="" style="width:60px;height:60px;object-fit:contain;border:1px solid #e9ecef;border-radius:8px;cursor:pointer;">
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <!-- 基本信息 -->
+        <div class="card mb-3" style="border:none; border-radius:12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);">
+            <div class="card-body">
+                <h5 class="card-title">{{ product.title }}</h5>
+                <p class="text-muted small">
+                    ASIN: <span class="asin-badge">{{ product.asin }}</span>
+                    {% if product.brand %} | Brand: <strong>{{ product.brand }}</strong>{% endif %}
+                </p>
+
+                <div class="d-flex align-items-baseline gap-2 my-3">
+                    {% if product.current_price %}
+                    <span class="fs-3 fw-bold text-success">${{ "%.2f"|format(product.current_price) }}</span>
+                    {% if product.list_price_raw %}
+                    <span class="text-muted text-decoration-line-through">{{ product.list_price_raw }}</span>
+                    {% endif %}
+                    {% else %}
+                    <span class="text-muted">价格暂缺</span>
+                    {% endif %}
+                </div>
+
+                {% if product.rating %}
+                <div class="mb-2">
+                    <span class="rating-stars fs-5">★</span>
+                    <span class="fw-bold">{{ "%.1f"|format(product.rating) }}</span>
+                    {% if product.review_count %}
+                    <span class="text-muted">({{ "{:,}".format(product.review_count) }} 评价)</span>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                {% if product.in_stock %}
+                <span class="badge bg-success">{{ product.in_stock }}</span>
+                {% endif %}
+
+                {% if product.delivery_info %}
+                <p class="small text-muted mt-2"><i class="bi bi-truck"></i> {{ product.delivery_info }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧: 价格走势 + 详情 -->
+    <div class="col-md-8">
+        <!-- 价格走势图 -->
+        <div class="card mb-3" style="border:none; border-radius:12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);">
+            <div class="card-header bg-white fw-semibold" style="border-radius:12px 12px 0 0;">
+                <i class="bi bi-graph-up"></i> 价格走势
+            </div>
+            <div class="card-body">
+                <div id="price-chart" style="width:100%;height:350px;"></div>
+            </div>
+        </div>
+
+        <!-- 五点描述 -->
+        {% if bullet_points %}
+        <div class="card mb-3" style="border:none; border-radius:12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);">
+            <div class="card-header bg-white fw-semibold" style="border-radius:12px 12px 0 0;">
+                <i class="bi bi-list-ul"></i> 产品亮点
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for bp in bullet_points %}
+                <li class="list-group-item">{{ bp }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- 技术规格 -->
+        {% if specifications %}
+        <div class="card mb-3" style="border:none; border-radius:12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);">
+            <div class="card-header bg-white fw-semibold" style="border-radius:12px 12px 0 0;">
+                <i class="bi bi-gear"></i> 技术规格
+            </div>
+            <table class="table table-striped mb-0">
+                <tbody>
+                    {% for key, value in specifications.items() %}
+                    <tr>
+                        <td class="fw-semibold" style="width:40%">{{ key }}</td>
+                        <td>{{ value }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- 商品描述 -->
+        {% if product.description %}
+        <div class="card" style="border:none; border-radius:12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);">
+            <div class="card-header bg-white fw-semibold" style="border-radius:12px 12px 0 0;">
+                <i class="bi bi-file-text"></i> 商品描述
+            </div>
+            <div class="card-body">
+                <p class="text-muted">{{ product.description[:1000] }}{% if product.description|length > 1000 %}...{% endif %}</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function() {
+    var chart = echarts.init(document.getElementById('price-chart'));
+    var dates = {{ chart_dates | tojson }};
+    var prices = {{ chart_prices | tojson }};
+
+    if (dates.length === 0) {
+        chart.setOption({
+            title: { text: '暂无价格数据，请先执行采集和价格监控', left: 'center', top: 'center',
+                     textStyle: { color: '#999', fontSize: 14 } }
+        });
+        return;
+    }
+
+    var option = {
+        tooltip: {
+            trigger: 'axis',
+            formatter: function(params) {
+                return params[0].axisValue + '<br/>价格: <b>$' + params[0].value.toFixed(2) + '</b>';
+            }
+        },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: {
+            type: 'category',
+            data: dates,
+            axisLabel: { rotate: 30, fontSize: 11 },
+            boundaryGap: false
+        },
+        yAxis: {
+            type: 'value',
+            name: '价格 (USD)',
+            axisLabel: { formatter: '${value}' },
+            scale: true
+        },
+        series: [{
+            name: '价格',
+            type: 'line',
+            data: prices,
+            smooth: true,
+            lineStyle: { color: '#0d6efd', width: 2 },
+            itemStyle: { color: '#0d6efd' },
+            areaStyle: {
+                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                    { offset: 0, color: 'rgba(13,110,253,0.2)' },
+                    { offset: 1, color: 'rgba(13,110,253,0.02)' }
+                ])
+            },
+            markPoint: {
+                data: [
+                    { type: 'min', name: '最低价', symbol: 'pin', symbolSize: 40,
+                      itemStyle: { color: '#198754' } },
+                    { type: 'max', name: '最高价', symbol: 'pin', symbolSize: 40,
+                      itemStyle: { color: '#dc3545' } }
+                ]
+            }
+        }]
+    };
+
+    chart.setOption(option);
+    window.addEventListener('resize', function() { chart.resize(); });
+})();
+</script>
+{% endblock %}

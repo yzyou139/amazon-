@@ -1,0 +1,4 @@
+2026-07-15 09:37:43.402 | ERROR    | app.crawler.detail_crawler:_crawl_single_detail:63 | ASIN B0GSXLK8SC: 异常 (attempt 1/2) — Page.goto: Timeout 60000ms exceeded.
+Call log:
+  - navigating to "https://www.amazon.com/dp/B0GSXLK8SC", waiting until "domcontentloaded"
+

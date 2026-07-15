@@ -1,0 +1,27 @@
+version: "3.8"
+
+services:
+  # Web Dashboard
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      - AMAZON_WEB_HOST=0.0.0.0
+      - AMAZON_WEB_PORT=8000
+    restart: unless-stopped
+    command: python main.py web
+
+  # 定时调度器
+  scheduler:
+    build: .
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./config.yaml:/app/config.yaml:ro
+    restart: unless-stopped
+    command: python main.py schedule

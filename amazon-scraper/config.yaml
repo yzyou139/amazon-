@@ -1,0 +1,42 @@
+# ============================================================
+# Amazon Scraper 配置文件
+# 修改此文件后无需重启即可生效（部分选项需重新运行命令）
+# ============================================================
+
+# ---------- 数据库 ----------
+database_url: "sqlite:///data/amazon.db"
+
+# ---------- 爬虫 ----------
+keywords:
+
+  - "mouse"
+  - "keyboard"
+max_list_pages: 5          # 每个关键词抓取页数
+max_detail_asins: null      # 限制详情采集数量，null = 全部
+request_delay_min: 2.0      # 最小请求间隔（秒）
+request_delay_max: 4.0      # 最大请求间隔（秒）
+detail_concurrency: 6       # 并发数（能采多少采多少，不纠结被拦的）
+page_timeout: 60            # 页面加载超时（秒）
+
+# ---------- curl_cffi 浏览器模拟 ----------
+impersonate_target: "chrome120"  # chrome99 / chrome110 / chrome120 / safari15_5
+
+# ---------- 代理 (可选) ----------
+proxy_enabled: false
+proxy_url: null  # http://user:pass@host:port
+
+# ---------- 通知 (可选) ----------
+telegram_bot_token: null    # 从 @BotFather 获取
+telegram_chat_id: null      # 从 @userinfobot 获取
+
+# ---------- 定时调度 ----------
+schedule_crawl_hour: 9        # 每天几点执行采集
+schedule_monitor_interval: 6  # 价格检查间隔（小时）
+
+# ---------- Web 服务 ----------
+web_host: "localhost"
+web_port: 8000
+
+# ---------- 路径 ----------
+data_dir: "data"
+log_dir: "logs"

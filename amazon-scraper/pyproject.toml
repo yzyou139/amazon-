@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "amazon-scraper"
+version = "2.0.0"
+description = "Amazon Product Scraper & Price Monitor — 亚马逊商品数据采集与价格监控系统"
+readme = "README.md"
+requires-python = ">=3.12"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
